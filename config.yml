@@ -1,0 +1,6 @@
+event_time: ==27
+leader_shoot: '>=5'
+leader_shoot_on_target: '>=3'
+loser_shoot: <=2
+loser_shoot_on_target: <=1
+possession: '>=60'
