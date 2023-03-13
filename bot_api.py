@@ -10,4 +10,6 @@ def bot_send_message(msg, chat_id=CHAT_ID, parse_mode='html'):
 
 
 if __name__ == "__main__":
-    print(bot_send_message('Hellö Wörld@Python/duble'))
+    url = "https://www.flashscore.com.ua/match/OphEJZ1i/#/match-summary/match-summary"
+    bot_send_message(
+        f'<a href="{url}">Игра</a> полностью удовлетворяет условиям!')

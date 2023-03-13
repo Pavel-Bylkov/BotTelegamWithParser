@@ -103,10 +103,10 @@ def parser(url='https://www.flashscore.com.ua'):
         if i.text == "LIVE":
             i.click()
     names_leagues = []
-    pageSource = driver.page_source
-    fileToWrite = open("page_source.html", "w", encoding="utf-8")
-    fileToWrite.write(pageSource)
-    fileToWrite.close()
+    # pageSource = driver.page_source
+    # fileToWrite = open("page_source.html", "w", encoding="utf-8")
+    # fileToWrite.write(pageSource)
+    # fileToWrite.close()
     for i in driver.find_elements(By.CLASS_NAME, 'event__match'):
         print(i.text)
         names_leagues.append(i.get_attribute("id"))
