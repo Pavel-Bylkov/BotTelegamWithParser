@@ -1,7 +1,7 @@
 import requests
 import urllib.parse
-from env_secret import CHAT_ID
-TOKEN = "6134029917:AAGB1cyuhfrrtEbSqhnNzoq-BB01ebpyh0g"
+from env_secret import CHAT_ID, TOKEN
+
 
 def bot_send_message(msg, parse_mode='html'):
     msg = urllib.parse.quote(msg)
