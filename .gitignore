@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 env_secret.py
 .idea/
+chromedriver/
 
 # C extensions
 *.so
