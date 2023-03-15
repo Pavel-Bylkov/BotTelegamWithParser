@@ -67,6 +67,8 @@ def filter_by_league(league):
         return league in leagues
     raise Exception("Error in filter: don't have leagues list")
 
+check_config()
+check_leagues()
 
 if __name__ == "__main__":
     match_stat = {'event_time': 27,
