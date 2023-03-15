@@ -33,7 +33,7 @@ def gen_markup(list_btns):
 @bot.message_handler(commands=["start", 'button'])
 def start(m, res=False):
     print(m.chat.id, m.text)
-    if m.chat.id == CHAT_ID:
+    if str(m.chat.id) in CHAT_ID:
         bot.send_message(m.chat.id, 'Помощник готов к работе))')
     else:
         bot.send_message(m.chat.id, "Доступ к данному бот-сервису запрещен!")
@@ -43,8 +43,8 @@ def start(m, res=False):
 @bot.message_handler(content_types=["text"])
 def message_reply(message):
     print(message.chat.id, message.text)
-    if str(message.chat.id) == CHAT_ID:
-        bot.send_message(CHAT_ID, message.text)
+    if str(message.chat.id) in CHAT_ID:
+        bot.send_message(message.chat.id, message.text)
     else:
         msg = "Доступ к данному бот-сервису запрещен!"
         # для удаления кнопок

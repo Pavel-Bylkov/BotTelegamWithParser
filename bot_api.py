@@ -1,15 +1,20 @@
 import requests
 import urllib.parse
-from env_secret import TOKEN, CHAT_ID
+from env_secret import CHAT_ID
+TOKEN = "6134029917:AAGB1cyuhfrrtEbSqhnNzoq-BB01ebpyh0g"
 
-
-def bot_send_message(msg, chat_id=CHAT_ID, parse_mode='html'):
+def bot_send_message(msg, parse_mode='html'):
     msg = urllib.parse.quote(msg)
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={msg}&parse_mode={parse_mode}"
-    return requests.get(url).json()
+    result = []
+    for chat_id in CHAT_ID:
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={msg}&parse_mode={parse_mode}"
+        result.append(requests.get(url).json())
+    return result
 
 
 if __name__ == "__main__":
     url = "https://www.flashscore.com.ua/match/OphEJZ1i/#/match-summary/match-summary"
     bot_send_message(
-        f'<a href="{url}">Игра</a> полностью удовлетворяет условиям!')
+        f'Test <a href="{url}">Игра</a> полностью удовлетворяет условиям!')
+    # url = f"https://api.telegram.org/bot{TOKEN}/getMe"
+    # print(requests.get(url).json())

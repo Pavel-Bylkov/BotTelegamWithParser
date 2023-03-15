@@ -1,6 +1,6 @@
-event_time: '>=27'
-leader_shoot: '>=1'
-leader_shoot_on_target: '>=1'
-loser_shoot: <=10
-loser_shoot_on_target: <=10
-possession: '>=51'
+event_time: 25-35
+leader_shoot: '>=5'
+leader_shoot_on_target: '>=3'
+loser_shoot: <=2
+loser_shoot_on_target: <=1
+possession: '>=55'

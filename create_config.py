@@ -1,16 +1,16 @@
 # Пример условий отбора:
 # Время матча: 28 минута
-EVENT_TIME = ">=27"  # or >28 or <28 or <=28 or >=28 or 0-28 or 28-60
+EVENT_TIME = "25-35"  # or >28 or <28 or <=28 or >=28 or 0-28 or 28-60
 # Владение мячом: первая или вторая команда - не менее 60%
-POSSESSION = ">=51"
+POSSESSION = ">=55"
 # С БОЛЬШИМ ВЛАДЕНИЕМ УДАРЫ
-LEADER_SHOOT = ">=1"
+LEADER_SHOOT = ">=5"
 # С МЕНЬШИМ ВЛАДЕНИЕМ УДАРЫ
-LOSER_SHOOT = "<=10"
+LOSER_SHOOT = "<=2"
 # С БОЛЬШИМ ВЛАДЕНИЕМ УДАРЫ В СТВОР
-LEADER_SHOOT_ON_TARGET = ">=1"
+LEADER_SHOOT_ON_TARGET = ">=3"
 # С МЕНЬШИМ ВЛАДЕНИЕМ УДАРЫ В СТВОР
-LOSER_SHOOT_ON_TARGET = "<=10"
+LOSER_SHOOT_ON_TARGET = "<=1"
 
 
 CONFIG_FILE = 'config.yml'
