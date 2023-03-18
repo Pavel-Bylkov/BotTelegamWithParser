@@ -1,3 +1,5 @@
+from file_utils import write_to
+
 # Пример условий отбора:
 # Время матча: 28 минута
 EVENT_TIME = "25-35"  # or >28 or <28 or <=28 or >=28 or 0-28 or 28-60
@@ -26,13 +28,7 @@ def create_config_file():
         'leader_shoot_on_target': LEADER_SHOOT_ON_TARGET,
         'loser_shoot_on_target': LOSER_SHOOT_ON_TARGET
     }
-    from yaml import YAMLError, safe_dump
-
-    with open(CONFIG_FILE, 'w') as f:
-        try:
-            safe_dump(data, f)
-        except YAMLError as exc:
-            print(exc)
+    write_to(CONFIG_FILE, data)
 
 
 def create_file_leagues():
@@ -112,8 +108,7 @@ def create_file_leagues():
                # "Северная и Центральная Америка: Лига Чемпионов Конкакаф",
                #  "МЕКСИКА: ЛИГА ЭКСПАНСЬОН МХ"
                ]
-    with open(LEAGUES_FILE, "w") as f:
-        f.write("\n".join(leagues))
+    write_to(LEAGUES_FILE, "\n".join(leagues))
 
 
 if __name__ == "__main__":

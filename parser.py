@@ -11,6 +11,10 @@ from bot_api import bot_send_message
 
 # Строгий отбор
 STRICT_SELECTION = False
+TIME_OUT_IN_CACHE = 90
+TIME_OUT_IN_CACHE_NEAR = 5
+BASE_URL = 'https://www.flashscore.com.ua'
+MATCH_URL = 'https://www.flashscore.com.ua/match/{}/#/match-summary/match-statistics/0'
 GOOD_MSG = '<a href="{}">Игра</a> из лиги {} полностью удовлетворяет условиям!'
 GOOD_MSG2 = '<a href="{}">Игра</a> из лиги {} близко к условиям!'
 
@@ -37,7 +41,9 @@ def update_cache(cache):
 
 def msg_send(msg, id, cache):
     if "полностью" in msg:
-        cache[id] = 90
+        cache[id] = TIME_OUT_IN_CACHE
+    else:
+        cache[id + "temp"] = TIME_OUT_IN_CACHE_NEAR
     print(msg)
     return bot_send_message(msg)
 
@@ -53,7 +59,7 @@ def get_stats(id, cache):
     if id in cache:
         return {}
     driver = get_driver()
-    url = f'https://www.flashscore.com.ua/match/{id}/#/match-summary/match-statistics/0'
+    url = MATCH_URL.format(id)
     try:
         driver.get(url)
         time.sleep(1)
@@ -105,6 +111,8 @@ def get_stats(id, cache):
                 if not STRICT_SELECTION and len(team2) == 1:
                     msg += '\nдля 2 команды не подходит ' + str(team2)
                 if not STRICT_SELECTION and (len(team1) == 1 or len(team2) == 1):
+                    if id + "temp" in cache:
+                        return {}
                     return msg_send(msg, id, cache)
     except Exception as e:
         print("Error in get_stat:", e.__traceback__)
@@ -113,7 +121,7 @@ def get_stats(id, cache):
         driver.quit()
     return {}
 
-def parser(url='https://www.flashscore.com.ua'):
+def parser(url):
     driver: webdriver = get_driver()
     names_leagues = []
     try:
@@ -144,7 +152,7 @@ def check_stat():
     cache = {}
     start = time.time()
     while True:
-        match_ids = parser()
+        match_ids = parser(BASE_URL)
         with Manager() as manager:
             d = manager.dict(cache)
             with manager.Pool() as pool:

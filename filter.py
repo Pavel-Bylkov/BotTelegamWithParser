@@ -1,7 +1,7 @@
 import os
 import sys
 
-from yaml import safe_load, YAMLError
+from file_utils import read_from
 
 from create_config import create_config_file, CONFIG_FILE, LEAGUES_FILE, create_file_leagues
 
@@ -15,28 +15,25 @@ if not os.path.exists(LEAGUES_FILE):
 last_access_league = None
 leagues = None
 
+
 def check_leagues():
     global last_access_league, leagues
     if last_access_league != os.path.getmtime(LEAGUES_FILE):
-        with open(LEAGUES_FILE, 'r') as f:
-            leagues = f.read().lower().split("\n")
-            # print(*leagues, sep="\n")
+        leagues = read_from(LEAGUES_FILE).lower().split("\n")
+        # print(*leagues, sep="\n")
         last_access_league = os.path.getmtime(LEAGUES_FILE)
+
 
 def check_config():
     global last_access, data
     if last_access != os.path.getmtime(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            try:
-                data = safe_load(f)
-                # print(data['event_time'])
-                # print(data['possession'])
-                # print(data['leader_shoot'])
-                # print(data['loser_shoot'])
-                # print(data['leader_shoot_on_target'])
-                # print(data['loser_shoot_on_target'])
-            except YAMLError as exc:
-                print(exc)
+        data = read_from(CONFIG_FILE)
+        # print(data['event_time'])
+        # print(data['possession'])
+        # print(data['leader_shoot'])
+        # print(data['loser_shoot'])
+        # print(data['leader_shoot_on_target'])
+        # print(data['loser_shoot_on_target'])
         last_access = os.path.getmtime(CONFIG_FILE)
 
 
@@ -66,6 +63,7 @@ def filter_by_league(league):
     if leagues is not None:
         return league in leagues
     raise Exception("Error in filter: don't have leagues list")
+
 
 check_config()
 check_leagues()

@@ -1,12 +1,13 @@
 import requests
 import urllib.parse
-from env_secret import CHAT_ID, TOKEN
-
+from env_secret import TOKEN
+from users_permissions import allow_users, update_allow
 
 def bot_send_message(msg, parse_mode='html'):
     msg = urllib.parse.quote(msg)
     result = []
-    for chat_id in CHAT_ID:
+    update_allow()
+    for chat_id in allow_users:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={msg}&parse_mode={parse_mode}"
         result.append(requests.get(url).json())
     return result
