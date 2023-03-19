@@ -8,9 +8,8 @@ from multiprocessing import Pool, Manager
 
 from filter import filter_by_stat, filter_by_league
 from bot_api import bot_send_message
+from env_secret import STRICT_SELECTION
 
-# Строгий отбор
-STRICT_SELECTION = False
 TIME_OUT_IN_CACHE = 90
 TIME_OUT_IN_CACHE_NEAR = 5
 BASE_URL = 'https://www.flashscore.com.ua'
@@ -120,6 +119,7 @@ def get_stats(id, cache):
         driver.close()
         driver.quit()
     return {}
+
 
 def parser(url):
     driver: webdriver = get_driver()

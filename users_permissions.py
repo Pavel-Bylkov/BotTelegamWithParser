@@ -10,25 +10,34 @@ BAN_FILENAME = "users_ban_list.json"
 
 def set_allow_users():
     allow_users.update(read_from(ALLOW_FILENAME))
+    flag = False
     for id in ALLOW_ID:
         if str(id) not in allow_users:
             allow_users[str(id)] = {"id": id,
                                     "first_name": "",
                                     "last_name": "", "username": ""}
+            flag = True
     if str(ADMIN) not in allow_users:
         allow_users[str(ADMIN)] = {"id": ADMIN,
                                    "first_name": "",
                                    "last_name": "", "username": ""}
+        flag = True
+    if flag or not os.path.exists(ALLOW_FILENAME):
+        write_to(ALLOW_FILENAME, allow_users)
     return os.path.getmtime(ALLOW_FILENAME)
 
 
 def set_ban_users():
     ban_users.update(read_from(BAN_FILENAME))
+    flag = False
     for id in BAN_ID:
         if str(id) not in ban_users:
             ban_users[str(id)] = {"id": id,
                                   "first_name": "",
                                   "last_name": "", "username": ""}
+            flag = True
+    if flag or not os.path.exists(BAN_FILENAME):
+        write_to(BAN_FILENAME, ban_users)
     return os.path.getmtime(BAN_FILENAME)
 
 

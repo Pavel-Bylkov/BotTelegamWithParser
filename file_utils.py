@@ -8,7 +8,7 @@ def write_to(file_name: str, data):
     elif file_name.endswith(".yaml") or file_name.endswith(".yml"):
         write_yaml(file_name, data)
     else:
-        with open(file_name, "w") as f:
+        with open(file_name, "w", encoding="utf-8") as f:
             f.write(data)
 
 
@@ -19,7 +19,7 @@ def read_from(file_name):
         return read_yaml(file_name)
     else:
         try:
-            with open(file_name, "r") as f:
+            with open(file_name, "r", encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
             print(f"Error load {file_name}", e)
@@ -41,7 +41,7 @@ def read_json(file_name):
 
 
 def write_yaml(file_name, data):
-    with open(file_name, 'w') as f:
+    with open(file_name, 'w', encoding="utf-8") as f:
         try:
             safe_dump(data, f)
         except YAMLError as exc:
@@ -50,7 +50,7 @@ def write_yaml(file_name, data):
 
 def read_yaml(file_name):
     try:
-        with open(file_name, 'r') as f:
+        with open(file_name, 'r', encoding="utf-8") as f:
             try:
                 return safe_load(f)
             except YAMLError as exc:

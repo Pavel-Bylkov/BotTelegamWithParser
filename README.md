@@ -9,5 +9,11 @@ Telebot + parser
 
 TOKEN = "ваш токен" - взять у @BotFather
 
-CHAT_ID = ["ваш telegram ID", "ваш telegram ID 2"] - можно узнать через @IDBot
+ADMIN = "ваш telegram ID"  - можно узнать через @IDBot
 
+ALLOW_ID = []  - можно добавить подписчиков
+
+BAN_ID = [] - можно добавить заблоченных пользователей
+
+# Строгий отбор - True
+STRICT_SELECTION = False

@@ -1,6 +1,6 @@
 # pip install pyTelegramBotAPI
 
-from create_config import CONFIG_FILE, LEAGUES_FILE
+from filter import get_config_stat, LEAGUES_FILE
 
 import telebot
 from telebot import types
@@ -28,7 +28,7 @@ def clear_markup():
 
 
 def main_menu(m):
-    list_btns = ["Статус", "Подписчики", "Рестарт", "Настройки"]
+    list_btns = ["Подписчики", "Настройки"] # "Статус", "Рестарт",
     markup = gen_markup_menu(list_btns)
     bot.send_message(m.chat.id, 'Помощник готов к работе))', reply_markup=markup)
     bot.register_next_step_handler(m, main_menu_choices)
@@ -46,15 +46,14 @@ def main_menu_choices(m):
 
 
 def settings(m):
-    list_btns = ["Список лиг", "Время матча", "Владение", "Удары", "Назад"]
+    list_btns = ["Список лиг", "Условия отбора", "Назад"]
     markup = gen_markup_menu(list_btns)
     bot.send_message(m.chat.id, 'Какие настройки интересуют?', reply_markup=markup)
     bot.register_next_step_handler(m, settings_actions)
 
 
 def settings_actions(m):
-    query = {"список лиг": league_menu, "время матча": time_event,
-             "владение": passion, "удары": shoot_menu, "назад": start}
+    query = {"список лиг": league_menu, "условия отбора": config_menu, "назад": start}
     try:
         query[m.text.lower()](m)
     except Exception as e:
@@ -66,12 +65,14 @@ def settings_actions(m):
 def league_menu(m):
     list_btns = ["Добавить", "Удалить", "Назад"]
     markup = gen_markup_menu(list_btns)
-    leagues = "Список лиг для отбора:\n"
-    if data := read_from(LEAGUES_FILE):
-        leagues += "\n".join([f"{i} - {league}" for i, league in enumerate(leagues, 1)])
+    msg = "Список лиг для отбора:\n"
+    leagues = read_from(LEAGUES_FILE).split("\n")
+    if leagues:
+        leagues.sort()
+        msg += "\n".join([f"{i} - {league}" for i, league in enumerate(leagues, 1)])
     else:
-        leagues = f"Ошибка чтения списка лиг"
-    bot.send_message(m.chat.id, leagues, reply_markup=markup)
+        msg = f"Ошибка чтения списка лиг"
+    bot.send_message(m.chat.id, msg, reply_markup=markup)
     bot.register_next_step_handler(m, league_action)
 
 
@@ -107,14 +108,6 @@ def add_league(m):
 
 def choice_league(m):
     msg = "Укажите номер строки списка лиг для удаления или нажмите Назад:"
-    bot.send_message(m.chat.id, msg)
-    leagues = read_from(LEAGUES_FILE).split("\n")
-    if leagues:
-        leagues.sort()
-        msg = "\n".join([f"{i} - {league}" for i, league in enumerate(leagues, 1)])
-    else:
-        print(f"Ошибка чтения списка лиг")
-        msg = "Ошибка чтения списка лиг"
     list_btns = ["Назад"]
     markup = gen_markup_menu(list_btns)
     bot.send_message(m.chat.id, msg, reply_markup=markup)
@@ -139,17 +132,23 @@ def del_league(m):
     bot.register_next_step_handler(m, league_menu)
 
 
-def shoot_menu(m):
-    bot.send_message(m.chat.id, 'Функция в разработке...')
-
-
-def time_event(m):
-    bot.send_message(m.chat.id, 'Функция в разработке...')
-
-
-def passion(m):
-    bot.send_message(m.chat.id, 'Функция в разработке...')
-
+def config_menu(m):
+    match_stat = {'event_time': "Время матча",
+                  'possession': "Владение мячом",
+                  'leader_shoot': "C большим владением удары",
+                  'loser_shoot': "С меньшим владением удары",
+                  'leader_shoot_on_target': "С большим владением удары в створ",
+                  'loser_shoot_on_target': "С меньшим владением удары в створ"}
+    msg = "Настройки окружения env_secret.py:\n"
+    msg += read_from("env_secret.py")
+    bot.send_message(m.chat.id, msg)
+    config = get_config_stat()
+    for key in match_stat:
+        markup = types.InlineKeyboardMarkup()
+        btn1 = types.InlineKeyboardButton("Изменить", callback_data="edit_"+key)
+        markup.row(btn1)
+        bot.send_message(ADMIN, f"{match_stat[key]}: {config[key]}", reply_markup=markup)
+    bot.register_next_step_handler(m, settings)
 
 def get_status(m):
     bot.send_message(m.chat.id, 'Функция в разработке...')
@@ -164,15 +163,43 @@ def subscribes(m):
     markup = gen_markup_menu(list_btns)
     subs = "Список подписчиков:\n"
     if data := read_from(ALLOW_FILENAME):
-        subs += "\n".join([f"{i} - {user}" for i, user in enumerate(data.values(), 1)])
+        data = sorted(data.values(), key=lambda user: int(user["id"]))
+        subs += "\n".join([f"{i} - {user}" for i, user in enumerate(data, 1)])
     bot.send_message(m.chat.id, subs, reply_markup=markup)
     bot.register_next_step_handler(m, subscribes_action)
 
+
 def subscribes_action(m):
     if m.text.lower() == "удалить":
-        choice_league(m)
+        choice_allow_user(m)
     else:
-        settings(m)
+        main_menu(m)
+
+
+def choice_allow_user(m):
+    msg = "Укажите номер строки подписчика для удаления или нажмите Назад:"
+    list_btns = ["Назад"]
+    markup = gen_markup_menu(list_btns)
+    bot.send_message(m.chat.id, msg, reply_markup=markup)
+    bot.register_next_step_handler(m, del_allow_user)
+
+
+def del_allow_user(m):
+    if m.text.lower() == "назад":
+        bot.send_message(m.chat.id, "Возврат")
+    elif not str(m.text).isdigit():
+        bot.send_message(m.chat.id, f"{m.text} - не верный формат ввода")
+    else:
+        i = int(m.text) - 1
+        data = read_from(ALLOW_FILENAME)
+        if data and 0 <= i < len(data):
+            id = sorted(data.values(), key=lambda user: int(user["id"]))[i]["id"]
+            del_user_from_allow(user := data[str(id)])
+            bot.send_message(m.chat.id, f"{user} удален")
+        else:
+            bot.send_message(m.chat.id, f"{m.text} подписчик не удален, проверьте номер строки")
+    bot.register_next_step_handler(m, subscribes)
+
 
 # Функция, обрабатывающая команду /start
 @bot.message_handler(commands=["start", 'button'])
@@ -182,6 +209,10 @@ def start(m, res=False):
     if str(m.chat.id) == ADMIN:
         admin_info = f"@{m.from_user.username} - {m.from_user.first_name} {m.from_user.last_name}"
         print(admin_info)
+        add_user_to_allow({"id": m.from_user.id,
+                              "first_name": m.from_user.first_name,
+                              "last_name": m.from_user.last_name,
+                              "username": m.from_user.username})
         main_menu(m)
     elif str(m.chat.id) not in allow_users and str(m.chat.id) not in ban_users:
         bot.send_message(m.chat.id, f"Ваш запрос на подписку рассматривается администратором {admin_info}.")
@@ -195,7 +226,6 @@ def start(m, res=False):
         markup.row(btn1, btn2)
         msg = bot.send_message(ADMIN, f"Новый запрос на подписку от {user}", reply_markup=markup)
         users_for_allow[msg.id] = user
-        # bot.register_next_step_handler_by_chat_id(ADMIN, permission)
     elif str(m.chat.id) in allow_users:
         bot.send_message(m.chat.id, "Добро пожаловать, подписчик. Буду оповещать об интересных матчах.")
     else:
@@ -203,14 +233,33 @@ def start(m, res=False):
 
 
 @bot.callback_query_handler(func=lambda callback: True)
-def permission(callback):
-    msg_id = callback.message.message_id - 1
-    if callback.data == "allow":
-        add_user_to_allow(users_for_allow[msg_id])
-        del users_for_allow[msg_id]
-    elif callback.data == "ban":
-        add_user_to_ban(users_for_allow[msg_id])
-        del users_for_allow[msg_id]
+def callback_query_handler(callback):
+    query = {'edit_event_time': "Время матча",
+             'edit_possession': "Владение мячом",
+             'edit_leader_shoot': "C большим владением удары",
+             'edit_loser_shoot': "С меньшим владением удары",
+             'edit_leader_shoot_on_target': "С большим владением удары в створ",
+             'edit_loser_shoot_on_target': "С меньшим владением удары в створ"}
+    if callback.data in query:
+        bot.send_message(ADMIN, 'Функция в разработке...')
+        # todo callback
+        bot.register_next_step_handler_by_chat_id(ADMIN, main_menu)
+    else:
+        msg_id = callback.message.message_id
+        try:
+            user = users_for_allow[msg_id]
+            if callback.data == "allow":
+                add_user_to_allow(user)
+                bot.send_message(user["id"], "Поздравляю! Вас добавили в подписчики.")
+            elif callback.data == "ban":
+                add_user_to_ban(user)
+                bot.send_message(user["id"], "К сожалению, доступ к сервису для вас заблокирован.")
+            del users_for_allow[msg_id]
+            m = f'{user} добавлен в список'
+        except Exception as e:
+            print("Error in callback_query_handler:", e)
+            m = "Что-то пошло не так, необходимо новому подписчику повторно отправить команду /start"
+        bot.send_message(ADMIN, m)
 
 
 # Получение сообщений не из меню
@@ -220,7 +269,7 @@ def message_reply(m):
     if str(m.chat.id) == ADMIN:
         bot.reply_to(m, "Команда не распознана")
         bot.register_next_step_handler(m, main_menu)
-    if str(m.chat.id) in allow_users:
+    elif str(m.chat.id) in allow_users:
         msg = f"По всем вопросам свяжитесь с админом - {admin_info}"
         bot.send_message(m.chat.id, msg)
     else:

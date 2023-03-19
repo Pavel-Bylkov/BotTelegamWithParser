@@ -65,6 +65,13 @@ def filter_by_league(league):
     raise Exception("Error in filter: don't have leagues list")
 
 
+def get_config_stat():
+    check_config()
+    if data is not None:
+        return data
+    raise Exception("Error in filter: don't have config parameters")
+
+
 check_config()
 check_leagues()
 
