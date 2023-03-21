@@ -1,7 +1,7 @@
 import os
 import sys
 
-from file_utils import read_from
+from file_utils import read_from, write_to
 
 from create_config import create_config_file, CONFIG_FILE, LEAGUES_FILE, create_file_leagues
 
@@ -50,7 +50,7 @@ def compare(elem, conf):
     raise Exception(f"Error in compare: don't made with {elem} and {conf}")
 
 
-def filter_by_stat(match_stat):
+def filter_by_stat(match_stat: dict) -> dict:
     check_config()
     if data is not None:
         return {key: compare(match_stat[key], value)
@@ -58,18 +58,37 @@ def filter_by_stat(match_stat):
     raise Exception("Error in filter: don't have config parameters")
 
 
-def filter_by_league(league):
+def filter_by_league(league) -> bool:
     check_leagues()
     if leagues is not None:
         return league in leagues
     raise Exception("Error in filter: don't have leagues list")
 
 
-def get_config_stat():
+def get_config_stat() -> dict:
     check_config()
     if data is not None:
         return data
     raise Exception("Error in filter: don't have config parameters")
+
+
+def update_config(key: str, value: str) -> bool:
+    v = value.replace(" ", "")
+    check = False
+    if "-" in v and all([s.isdigit() for s in v.split("-")]):
+        check = True
+    elif any([v.startswith(s) for s in (">=", "<=", "==")]):
+        check = v.replace(">=", "").replace("<=", "").replace("==", "").isdigit()
+    elif any([v.startswith(s) for s in (">", "<")]) and "=" not in v:
+        check = v.replace(">", "").replace("<", "").replace("==", "").isdigit()
+    if not check:
+        return False
+    try:
+        data[key] = v
+        write_to(CONFIG_FILE, data)
+    except Exception:
+        return False
+    return True
 
 
 check_config()
@@ -84,3 +103,5 @@ if __name__ == "__main__":
                   'loser_shoot_on_target': 0}
     x = filter_by_stat(match_stat)
     print("YES" if all(x.values()) else "NO" + str(x))
+    print(update_config("possession", "50 - 56"))
+    print(get_config_stat())

@@ -1,6 +1,6 @@
 # pip install pyTelegramBotAPI
 
-from filter import get_config_stat, LEAGUES_FILE
+from filter import get_config_stat, LEAGUES_FILE, update_config
 
 import telebot
 from telebot import types
@@ -28,7 +28,7 @@ def clear_markup():
 
 
 def main_menu(m):
-    list_btns = ["Подписчики", "Настройки"] # "Статус", "Рестарт",
+    list_btns = ["Подписчики", "Настройки"]  # "Статус", "Рестарт",
     markup = gen_markup_menu(list_btns)
     bot.send_message(m.chat.id, 'Помощник готов к работе))', reply_markup=markup)
     bot.register_next_step_handler(m, main_menu_choices)
@@ -56,9 +56,7 @@ def settings_actions(m):
     query = {"список лиг": league_menu, "условия отбора": config_menu, "назад": start}
     try:
         query[m.text.lower()](m)
-    except Exception as e:
-        print(e)
-        bot.send_message(m.chat.id, 'Неверный выбор, попробуй еще раз')
+    except Exception:
         bot.register_next_step_handler(m, settings_actions)
 
 
@@ -145,10 +143,27 @@ def config_menu(m):
     config = get_config_stat()
     for key in match_stat:
         markup = types.InlineKeyboardMarkup()
-        btn1 = types.InlineKeyboardButton("Изменить", callback_data="edit_"+key)
+        btn1 = types.InlineKeyboardButton("Изменить", callback_data="edit_" + key)
         markup.row(btn1)
         bot.send_message(ADMIN, f"{match_stat[key]}: {config[key]}", reply_markup=markup)
-    bot.register_next_step_handler(m, settings)
+    settings(m)
+
+
+def change_conf(key, m):
+    print("change conf for", key, "to", m.text)
+    match_stat = {'event_time': "Время матча",
+                  'possession': "Владение мячом",
+                  'leader_shoot': "C большим владением удары",
+                  'loser_shoot': "С меньшим владением удары",
+                  'leader_shoot_on_target': "С большим владением удары в створ",
+                  'loser_shoot_on_target': "С меньшим владением удары в створ"}
+    markup = gen_markup_menu(["Назад"])
+    if update_config(key, m.text):
+        msg = f"Новое значение для {match_stat[key]} записано"
+    else:
+        msg = f"Неверный формат значения для {match_stat[key]}"
+    bot.reply_to(m, msg, reply_markup=markup)
+
 
 def get_status(m):
     bot.send_message(m.chat.id, 'Функция в разработке...')
@@ -210,9 +225,9 @@ def start(m, res=False):
         admin_info = f"@{m.from_user.username} - {m.from_user.first_name} {m.from_user.last_name}"
         print(admin_info)
         add_user_to_allow({"id": m.from_user.id,
-                              "first_name": m.from_user.first_name,
-                              "last_name": m.from_user.last_name,
-                              "username": m.from_user.username})
+                           "first_name": m.from_user.first_name,
+                           "last_name": m.from_user.last_name,
+                           "username": m.from_user.username})
         main_menu(m)
     elif str(m.chat.id) not in allow_users and str(m.chat.id) not in ban_users:
         bot.send_message(m.chat.id, f"Ваш запрос на подписку рассматривается администратором {admin_info}.")
@@ -234,16 +249,17 @@ def start(m, res=False):
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_query_handler(callback):
-    query = {'edit_event_time': "Время матча",
-             'edit_possession': "Владение мячом",
-             'edit_leader_shoot': "C большим владением удары",
-             'edit_loser_shoot': "С меньшим владением удары",
-             'edit_leader_shoot_on_target': "С большим владением удары в створ",
-             'edit_loser_shoot_on_target': "С меньшим владением удары в створ"}
+    query = {
+        'edit_event_time': lambda m: change_conf("event_time", m),
+        'edit_possession': lambda m: change_conf("possession", m),
+        'edit_leader_shoot': lambda m: change_conf("leader_shoot", m),
+        'edit_loser_shoot': lambda m: change_conf("loser_shoot", m),
+        'edit_leader_shoot_on_target': lambda m: change_conf("leader_shoot_on_target", m),
+        'edit_loser_shoot_on_target': lambda m: change_conf("loser_shoot_on_target", m)}
     if callback.data in query:
-        bot.send_message(ADMIN, 'Функция в разработке...')
-        # todo callback
-        bot.register_next_step_handler_by_chat_id(ADMIN, main_menu)
+        msg = 'Напиши новое значение (примеры: >5 | <=3 | ==3 | 20-30)'
+        bot.reply_to(callback.message, msg, reply_markup=clear_markup())
+        bot.register_next_step_handler_by_chat_id(int(ADMIN), query[callback.data])
     else:
         msg_id = callback.message.message_id
         try:
