@@ -1,4 +1,7 @@
-# pip install pyTelegramBotAPI
+"""
+Главный файл для подписки на бота и изменения
+настроек в работе парсера через бота
+"""
 
 from filter import get_config_stat, LEAGUES_FILE, update_config
 

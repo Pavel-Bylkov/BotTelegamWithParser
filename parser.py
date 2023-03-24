@@ -16,6 +16,12 @@ BASE_URL = 'https://www.flashscore.com.ua'
 MATCH_URL = 'https://www.flashscore.com.ua/match/{}/#/match-summary/match-statistics/0'
 GOOD_MSG = '<a href="{}">Игра</a> из лиги {} полностью удовлетворяет условиям!'
 GOOD_MSG2 = '<a href="{}">Игра</a> из лиги {} близко к условиям!'
+STAT_KEYS = {'event_time': "Время матча",
+              'possession': "Владение мячом",
+              'leader_shoot': "C большим владением удары",
+              'loser_shoot': "С меньшим владением удары",
+              'leader_shoot_on_target': "С большим владением удары в створ",
+              'loser_shoot_on_target': "С меньшим владением удары в створ"}
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -94,7 +100,7 @@ def get_stats(id, cache):
                 x = filter_by_stat(match_stat)
                 if all(x.values()):
                     return msg_send(GOOD_MSG.format(url, league), id, cache)
-                team1 = {key: value for key, value in match_stat.items() if not x[key]}
+                team1 = {key: value for key, value in match_stat.items() if not x[key] and key != 'possession'}
                 match_stat['possession'] = away[0][:2]
                 match_stat['leader_shoot'] = away[1]
                 match_stat['loser_shoot'] = home[1]
@@ -103,16 +109,16 @@ def get_stats(id, cache):
                 y = filter_by_stat(match_stat)
                 if all(y.values()):
                     return msg_send(GOOD_MSG.format(url, league), id, cache)
-                team2 = {key: value for key, value in match_stat.items() if not y[key]}
-                msg = GOOD_MSG2.format(url, league)
+                team2 = {key: value for key, value in match_stat.items() if not y[key] and key != 'possession'}
+                m = GOOD_MSG2.format(url, league)
                 if not STRICT_SELECTION and len(team1) == 1:
-                    msg += '\nдля 1 команды не подходит ' + str(team1)
+                    m += f'\nдля 1 команды не подходит:\n {STAT_KEYS[list(team1.keys())[0]]} - {list(team1.values())[0]}'
                 if not STRICT_SELECTION and len(team2) == 1:
-                    msg += '\nдля 2 команды не подходит ' + str(team2)
+                    m += f'\nдля 2 команды не подходит:\n {STAT_KEYS[list(team2.keys())[0]]} - {list(team2.values())[0]}'
                 if not STRICT_SELECTION and (len(team1) == 1 or len(team2) == 1):
                     if id + "temp" in cache:
                         return {}
-                    return msg_send(msg, id, cache)
+                    return msg_send(m, id, cache)
     except Exception as e:
         print("Error in get_stat:", e.__traceback__)
     finally:
