@@ -88,7 +88,7 @@ def get_stats(id, cache):
                         time_event[1] = time_event[1].split(":")
                     elif "+" in time_event[1]:
                         time_event[1] = time_event[1].split("+")
-                    match_stat['event_time'] = time_event[1][0]
+                    match_stat['event_time'] = time_event[1][0].strip("\n")
                 print(url)
                 home = [i.text for i in driver.find_elements(By.CLASS_NAME, 'stat__homeValue')]
                 away = [i.text for i in driver.find_elements(By.CLASS_NAME, 'stat__awayValue')]
