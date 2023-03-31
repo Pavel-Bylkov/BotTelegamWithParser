@@ -10,12 +10,38 @@ from telebot import types
 
 from env_secret import TOKEN
 from users_permissions import *
+from functools import wraps
 
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
 
 users_for_allow = {}
 admin_info = ""
+
+
+def clean_send_message(func):
+    """Костыльный декоратор для исключения повтора сообщений"""
+    last = {"msg": "",
+            "id": "",
+            "result": None}
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            if last["id"] != str(args[0]) or last["msg"] != args[1]:
+                last["result"] = func(*args, **kwargs)
+                last["id"] = str(args[0])
+                last["msg"] = args[1]
+            else:
+                print(f"WARNING! Попытка повторного сообщения:\n{args}\n{kwargs}")
+        except Exception as e:
+            print("Error in decorator clean_send_message:", e)
+        return last["result"]
+
+    return wrapper
+
+
+bot.send_message = clean_send_message(bot.send_message)
 
 
 def gen_markup_menu(list_btns):
@@ -45,7 +71,7 @@ def main_menu_choices(m):
     except Exception as e:
         print(e)
         bot.send_message(m.chat.id, 'Неверный выбор, попробуй еще раз')
-        bot.register_next_step_handler(m, main_menu_choices)
+        main_menu(m)
 
 
 def settings(m):
