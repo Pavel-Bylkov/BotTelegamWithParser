@@ -2,6 +2,8 @@ import time
 from itertools import repeat
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 
 from multiprocessing import Pool, Manager
@@ -17,11 +19,11 @@ MATCH_URL = 'https://www.flashscore.com.ua/match/{}/#/match-summary/match-statis
 GOOD_MSG = '<a href="{}">Игра</a> из лиги {} полностью удовлетворяет условиям!'
 GOOD_MSG2 = '<a href="{}">Игра</a> из лиги {} близко к условиям!'
 STAT_KEYS = {'event_time': "Время матча",
-              'possession': "Владение мячом",
-              'leader_shoot': "C большим владением удары",
-              'loser_shoot': "С меньшим владением удары",
-              'leader_shoot_on_target': "С большим владением удары в створ",
-              'loser_shoot_on_target': "С меньшим владением удары в створ"}
+             'possession': "Владение мячом",
+             'leader_shoot': "C большим владением удары",
+             'loser_shoot': "С меньшим владением удары",
+             'leader_shoot_on_target': "С большим владением удары в створ",
+             'loser_shoot_on_target': "С меньшим владением удары в створ"}
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -54,7 +56,8 @@ def msg_send(msg, id, cache):
 
 
 def get_driver():
-    driver = webdriver.Chrome(executable_path='chromedriver/chromedriver.exe', options=chrome_options)
+    #  executable_path='chromedriver/chromedriver.exe'
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     driver.maximize_window()
     driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
     return driver
@@ -65,49 +68,60 @@ def get_stats(id, cache):
         return {}
     driver = get_driver()
     url = MATCH_URL.format(id)
+    debag_msg = ""
     try:
         driver.get(url)
-        time.sleep(1)
+        time.sleep(3)
         # print(url)
         t = driver.find_element(By.CLASS_NAME, 'tournamentHeader__country')
         t = t.text.split(" -")
         league = t[0]
         match_stat = {}
         if filter_by_league(league.lower()):
-            print(league)
+            debag_msg += f"{league}\n"
             for i in driver.find_elements(By.CLASS_NAME, 'detailScore__status'):
                 if i.text == "ЗАВЕРШЕН":
-                    print(i.text)
+                    print(debag_msg, i.text)
                     return {}
                 if i.text == "ПЕРЕРЫВ":
                     match_stat['event_time'] = "45"
                 else:
                     time_event = i.text.split("ТАЙМ")
-                    print(time_event)
+                    debag_msg += f"{time_event}\n"
+                    time_event[1] = time_event[1].strip("\n")
                     if ":" in time_event[1]:
                         time_event[1] = time_event[1].split(":")
                     elif "+" in time_event[1]:
                         time_event[1] = time_event[1].split("+")
-                    match_stat['event_time'] = time_event[1][0].strip("\n")
-                print(url)
+                    match_stat['event_time'] = time_event[1][0]
+                # debag_msg += f"{url}\n"
                 home = [i.text for i in driver.find_elements(By.CLASS_NAME, 'stat__homeValue')]
                 away = [i.text for i in driver.find_elements(By.CLASS_NAME, 'stat__awayValue')]
-                match_stat['possession'] = home[0][:2]
-                match_stat['leader_shoot'] = home[1]
-                match_stat['loser_shoot'] = away[1]
-                match_stat['leader_shoot_on_target'] = home[2]
-                match_stat['loser_shoot_on_target'] = away[2]
+                # debag_msg += f"{"#"*20} Отладка статистики {"#"*20}\n"
+                # debag_msg += f"{' '.join(home)}\n"
+                # debag_msg += f"{' '.join(away)}\n"
+                # debag_msg += f"{"#" * 20} Отладка статистики {"#" * 20}\n"
+                start_index = 0 if "%" in home[0] else 1
+                match_stat['possession'] = home[start_index][:2]
+                match_stat['leader_shoot'] = home[start_index + 1]
+                match_stat['loser_shoot'] = away[start_index + 1]
+                match_stat['leader_shoot_on_target'] = home[start_index + 2]
+                match_stat['loser_shoot_on_target'] = away[start_index + 2]
+                debag_msg += f"1 team:\n{match_stat}"
                 x = filter_by_stat(match_stat)
                 if all(x.values()):
+                    print("GOOD RESULT:\n", debag_msg)
                     return msg_send(GOOD_MSG.format(url, league), id, cache)
                 team1 = {key: value for key, value in match_stat.items() if not x[key] and key != 'possession'}
-                match_stat['possession'] = away[0][:2]
-                match_stat['leader_shoot'] = away[1]
-                match_stat['loser_shoot'] = home[1]
-                match_stat['leader_shoot_on_target'] = away[2]
-                match_stat['loser_shoot_on_target'] = home[2]
+                match_stat['possession'] = away[start_index][:2]
+                match_stat['leader_shoot'] = away[start_index + 1]
+                match_stat['loser_shoot'] = home[start_index + 1]
+                match_stat['leader_shoot_on_target'] = away[start_index + 2]
+                match_stat['loser_shoot_on_target'] = home[start_index + 2]
+                debag_msg += f"2 team:\n{match_stat}"
                 y = filter_by_stat(match_stat)
                 if all(y.values()):
+                    print("GOOD RESULT:\n", debag_msg)
                     return msg_send(GOOD_MSG.format(url, league), id, cache)
                 team2 = {key: value for key, value in match_stat.items() if not y[key] and key != 'possession'}
                 m = GOOD_MSG2.format(url, league)
@@ -118,9 +132,11 @@ def get_stats(id, cache):
                 if not STRICT_SELECTION and (len(team1) == 1 or len(team2) == 1):
                     if id + "temp" in cache:
                         return {}
+                    print("NEAR RESULT:\n", debag_msg)
                     return msg_send(m, id, cache)
+                print("DEBAG INFO:\n", debag_msg)
     except Exception as e:
-        print("Error in get_stat:", e.__traceback__)
+        print("DEBAG INFO:\n", debag_msg, "\nError in get_stat:", e)
     finally:
         driver.close()
         driver.quit()
