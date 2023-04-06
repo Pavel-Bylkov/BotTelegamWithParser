@@ -2,6 +2,10 @@
 Главный файл для подписки на бота и изменения
 настроек в работе парсера через бота
 """
+import os
+import logging
+
+logging.basicConfig(filename="bot.log")
 
 from filter import get_config_stat, LEAGUES_FILE, update_config
 
@@ -199,6 +203,7 @@ def get_status(m):
 
 
 def restart_pars(m):
+    os.system(cmd)
     bot.send_message(m.chat.id, 'Функция в разработке...')
 
 

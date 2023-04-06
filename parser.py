@@ -1,4 +1,9 @@
 import time
+import os
+import sys
+import logging
+import traceback
+
 from itertools import repeat
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -11,6 +16,25 @@ from multiprocessing import Pool, Manager
 from filter import filter_by_stat, filter_by_league
 from bot_api import bot_send_message
 from env_secret import STRICT_SELECTION
+
+logging.basicConfig(filename="parser.log")
+logger = logging.getLogger('Parser')
+
+formatter = logging.Formatter(
+    '%(asctime)s (%(filename)s:%(lineno)d %(threadName)s) %(levelname)s - %(name)s: "%(message)s"'
+)
+
+console_output_handler = logging.StreamHandler(sys.stderr)
+console_output_handler.setFormatter(formatter)
+logger.addHandler(console_output_handler)
+
+logger.setLevel(logging.DEBUG)
+logger_level = logging.DEBUG
+
+
+# записываем pid process parser для отслеживания статуса и перезапуска
+with open("parser_current_pid.txt", "w") as file:
+    file.write(str(os.getppid()))
 
 TIME_OUT_IN_CACHE = 90
 TIME_OUT_IN_CACHE_NEAR = 5
@@ -32,6 +56,7 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_argument('--ignore-certificate-errors-spki-list')
 chrome_options.add_argument("--disable-gpu")
+# chrome_options.add_argument("start-maximized")
 chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\
                         (KHTML, like Gecko) Chrome/106.0.0.0 YaBrowser/22.11.5.715 Yowser/2.5 Safari/537.36")
 
@@ -102,7 +127,7 @@ def get_stats(id, cache):
                 # debag_msg += f"{' '.join(away)}\n"
                 # debag_msg += f"{"#" * 20} Отладка статистики {"#" * 20}\n"
                 start_index = 0 if "%" in home[0] else 1
-                match_stat['possession'] = home[start_index][:2]
+                match_stat['possession'] = home[start_index][:home[start_index].find("%")]
                 match_stat['leader_shoot'] = home[start_index + 1]
                 match_stat['loser_shoot'] = away[start_index + 1]
                 match_stat['leader_shoot_on_target'] = home[start_index + 2]
@@ -113,7 +138,7 @@ def get_stats(id, cache):
                     print("GOOD RESULT:\n", debag_msg)
                     return msg_send(GOOD_MSG.format(url, league), id, cache)
                 team1 = {key: value for key, value in match_stat.items() if not x[key] and key != 'possession'}
-                match_stat['possession'] = away[start_index][:2]
+                match_stat['possession'] = away[start_index][:away[start_index].find("%")]
                 match_stat['leader_shoot'] = away[start_index + 1]
                 match_stat['loser_shoot'] = home[start_index + 1]
                 match_stat['leader_shoot_on_target'] = away[start_index + 2]
@@ -134,9 +159,9 @@ def get_stats(id, cache):
                         return {}
                     print("NEAR RESULT:\n", debag_msg)
                     return msg_send(m, id, cache)
-                print("DEBAG INFO:\n", debag_msg)
+                logger.debug(f"DEBAG INFO:\n {debag_msg}")
     except Exception as e:
-        print("DEBAG INFO:\n", debag_msg, "\nError in get_stat:", e)
+        logger.error(f"DEBAG INFO:\n{debag_msg}\nError in get_stat: {e}")
     finally:
         driver.close()
         driver.quit()
@@ -162,7 +187,7 @@ def parser(url):
             id = i.get_attribute("id").replace("g_1_", "")
             names_leagues.append(id)
     except Exception as e:
-        print("Error in parser:", e)
+        logger.error("Error in parser: %s", str(e))
     finally:
         driver.close()
         driver.quit()
@@ -174,17 +199,40 @@ def check_stat():
     cache = {}
     start = time.time()
     while True:
-        match_ids = parser(BASE_URL)
-        with Manager() as manager:
-            d = manager.dict(cache)
-            with manager.Pool() as pool:
-                pool.starmap(get_stats, zip(match_ids, repeat(d, len(match_ids))))
-            cache = dict(d)
-        time.sleep(20)
-        if time.time() - start > 60:
-            update_cache(cache)
-            start = time.time()
+        try:
+            match_ids = parser(BASE_URL)
+            with Manager() as manager:
+                d = manager.dict(cache)
+                with manager.Pool() as pool:
+                    pool.starmap(get_stats, zip(match_ids, repeat(d, len(match_ids))))
+                cache = dict(d)
+            time.sleep(20)
+            if time.time() - start > 60:
+                update_cache(cache)
+                start = time.time()
+        except Exception as e:
+            if logger_level and logger_level >= logging.ERROR:
+                logger.error("Parser exception: %s", str(e))
+            if logger_level and logger_level >= logging.DEBUG:
+                logger.error("Exception traceback:\n%s", traceback.format_exc())
+            time.sleep(5)
+            continue
+        if logger_level and logger_level >= logging.INFO:
+            logger.error("Parser: loop exited")
 
 
 if __name__ == "__main__":
-    check_stat()
+    while True:
+        try:
+            check_stat()
+        except Exception as e:
+            if logger_level and logger_level >= logging.ERROR:
+                logger.error("Parser exception: %s", str(e))
+            if logger_level and logger_level >= logging.DEBUG:
+                logger.error("Exception traceback:\n%s", traceback.format_exc())
+            time.sleep(3)
+            continue
+        if logger_level and logger_level >= logging.INFO:
+            logger.error("Parser: loop exited")
+    if logger_level and logger_level >= logging.INFO:
+        logger.error("Break parser")
