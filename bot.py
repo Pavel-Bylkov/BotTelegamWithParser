@@ -12,6 +12,7 @@ logging.basicConfig(filename="bot.log")
 
 from io import BytesIO
 from PIL import ImageGrab
+import psutil
 
 from filter import get_config_stat, LEAGUES_FILE, update_config
 
@@ -220,34 +221,50 @@ def change_conf(key, m):
     bot.reply_to(m, msg, reply_markup=markup)
 
 
+def _get_parser_proc_info():
+    pids = []
+    for proc in psutil.process_iter():
+        try:
+            pinfo = proc.as_dict(attrs=['cmdline', 'pid', 'name', 'open_files', 'status'])
+        except psutil.NoSuchProcess:
+            pass
+        else:
+            if pinfo['name'] == "python.exe" and 'parser.py' in pinfo['cmdline']:
+                pids.append(pinfo['pid'])
+    if pids:
+        return pids, "running"
+    return None, "stopped"
+
+
 def get_status(m):
+    pid, status = _get_parser_proc_info()
     try:
         bio = BytesIO()
         bio.name = 'screenshot.png'
-        myScreenshot = ImageGrab.grab()
+        myScreenshot = ImageGrab.grab(all_screens=True)
         myScreenshot.save(bio, 'PNG')
         bio.seek(0)
         bot.send_photo(m.chat.id, photo=bio)
     except Exception as e:
         print(e)
-        bot.send_message(m.chat.id, 'Ошибка на стороне сервера')
+    bot.send_message(m.chat.id, f'Статус парсера: {status}')
     main_menu(m)
 
 
 def restart_pars(m):
-    pid = None
+    pid, status = _get_parser_proc_info()
     try:
-        with open("parser_current_pid.txt", "r") as f:
-            pid = int(f.read())
         if pid is not None:
-            os.kill(pid, signal.SIGTERM)  # CTRL_C_EVENT
+            tmp_pid = pid[:]
+            while tmp_pid:
+                os.kill(tmp_pid.pop(), signal.SIGTERM)  # CTRL_C_EVENT or SIGTERM
             bot.send_message(m.chat.id, 'Перезапуск парсера...')
             time.sleep(4)
-            with open("parser_current_pid.txt", "r") as f:
-                if pid != int(f.read()):
-                    bot.send_message(m.chat.id, 'Парсер перезапущен!')
-                else:
-                    bot.send_message(m.chat.id, 'Проблемы на сервере, парсер не перезапустился.')
+            pid2, status = _get_parser_proc_info()
+            if pid2 is not None and pid != pid2:
+                bot.send_message(m.chat.id, 'Парсер перезапущен!')
+            else:
+                bot.send_message(m.chat.id, 'Проблемы на сервере, парсер не перезапустился.')
         else:
             bot.send_message(m.chat.id, 'Проблемы на сервере, не найден PID процесса парсера.')
     except Exception as e:

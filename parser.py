@@ -1,5 +1,4 @@
 import time
-import os
 import sys
 import logging
 import traceback
@@ -11,7 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 
-from multiprocessing import Pool, Manager
+from multiprocessing import Manager
 
 from filter import filter_by_stat, filter_by_league
 from bot_api import bot_send_message
@@ -218,9 +217,6 @@ def check_stat():
 
 
 if __name__ == "__main__":
-    # записываем pid process parser для отслеживания статуса и перезапуска
-    with open("parser_current_pid.txt", "w") as file:
-        file.write(str(os.getpid()))
     while True:
         try:
             check_stat()
