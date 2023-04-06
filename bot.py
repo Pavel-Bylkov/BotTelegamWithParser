@@ -3,9 +3,15 @@
 настроек в работе парсера через бота
 """
 import os
+import signal
 import logging
+import sys
+import time
 
 logging.basicConfig(filename="bot.log")
+
+from io import BytesIO
+from PIL import ImageGrab
 
 from filter import get_config_stat, LEAGUES_FILE, update_config
 
@@ -15,6 +21,22 @@ from telebot import types
 from env_secret import TOKEN
 from users_permissions import *
 from functools import wraps
+
+
+logger = logging.getLogger('Bot')
+
+formatter = logging.Formatter(
+    '%(asctime)s (%(filename)s:%(lineno)d %(threadName)s) %(levelname)s - %(name)s: "%(message)s"'
+)
+
+console_output_handler = logging.StreamHandler(sys.stderr)
+console_output_handler.setFormatter(formatter)
+logger.addHandler(console_output_handler)
+
+logger.setLevel(logging.DEBUG)
+logger_level = logging.DEBUG
+
+
 
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
@@ -61,7 +83,7 @@ def clear_markup():
 
 
 def main_menu(m):
-    list_btns = ["Подписчики", "Настройки"]  # "Статус", "Рестарт",
+    list_btns = ["Подписчики", "Настройки", "Статус", "Рестарт"]
     markup = gen_markup_menu(list_btns)
     bot.send_message(m.chat.id, 'Помощник готов к работе))', reply_markup=markup)
     bot.register_next_step_handler(m, main_menu_choices)
@@ -199,12 +221,40 @@ def change_conf(key, m):
 
 
 def get_status(m):
-    bot.send_message(m.chat.id, 'Функция в разработке...')
+    try:
+        bio = BytesIO()
+        bio.name = 'screenshot.png'
+        myScreenshot = ImageGrab.grab()
+        myScreenshot.save(bio, 'PNG')
+        bio.seek(0)
+        bot.send_photo(m.chat.id, photo=bio)
+    except Exception as e:
+        print(e)
+        bot.send_message(m.chat.id, 'Ошибка на стороне сервера')
+    main_menu(m)
 
 
 def restart_pars(m):
-    os.system(cmd)
-    bot.send_message(m.chat.id, 'Функция в разработке...')
+    pid = None
+    try:
+        with open("parser_current_pid.txt", "r") as f:
+            pid = int(f.read())
+        if pid is not None:
+            os.kill(pid, signal.SIGTERM)  # CTRL_C_EVENT
+            bot.send_message(m.chat.id, 'Перезапуск парсера...')
+            time.sleep(4)
+            with open("parser_current_pid.txt", "r") as f:
+                if pid != int(f.read()):
+                    bot.send_message(m.chat.id, 'Парсер перезапущен!')
+                else:
+                    bot.send_message(m.chat.id, 'Проблемы на сервере, парсер не перезапустился.')
+        else:
+            bot.send_message(m.chat.id, 'Проблемы на сервере, не найден PID процесса парсера.')
+    except Exception as e:
+        print(e)
+        if logger_level and logger_level >= logging.ERROR:
+            logger.error("Parser restart exception: %s", str(e))
+    main_menu(m)
 
 
 def subscribes(m):

@@ -32,10 +32,6 @@ logger.setLevel(logging.DEBUG)
 logger_level = logging.DEBUG
 
 
-# записываем pid process parser для отслеживания статуса и перезапуска
-with open("parser_current_pid.txt", "w") as file:
-    file.write(str(os.getppid()))
-
 TIME_OUT_IN_CACHE = 90
 TIME_OUT_IN_CACHE_NEAR = 5
 BASE_URL = 'https://www.flashscore.com.ua'
@@ -222,6 +218,9 @@ def check_stat():
 
 
 if __name__ == "__main__":
+    # записываем pid process parser для отслеживания статуса и перезапуска
+    with open("parser_current_pid.txt", "w") as file:
+        file.write(str(os.getpid()))
     while True:
         try:
             check_stat()
